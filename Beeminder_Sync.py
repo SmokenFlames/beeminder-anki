@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 # by: muflax <mail@muflax.com>, 2012
 
+# PJJH added sync of current card count, 2013.
+
+# TODO handle deletion of decks; e.g. send a 0 to reset the Odometer goal
+# TODO handle import of decks; i.e. distinguish between cards created and cards downloaded
+
 # This add-on sends your review stats to Beeminder (beeminder.com) and so keeps
 # your graphs up-to-date.
 #
@@ -19,13 +24,16 @@
 ACCOUNT = "your account" # beeminder account name
 TOKEN   = "your token"   # available at <https://www.beeminder.com/api/v1/auth_token.json>
 
-# Goal names - Set either to "" if you don't use this kind of goal. The name is the short part in the URL.
+# Goal names - Set any of them to "" if you don't use that kind of goal. 
+# The name is the short part in the URL, also known as the 'slug'.
 REP_GOAL = "anki" # Goal for total reviews / day, e.g. "anki" if your goal is called "anki".
 NEW_GOAL = ""     # goal for new cards / day, e.g. "anki-new".
+CRE_GOAL = ""     # goal for newly created (or imported) cards / day, e.g. "anki-create"
 
 # Offsets - Skip that many earlier reps so your graph can start at 0 (for old decks - set to 0 if unsure).
 REP_OFFSET = 0
 NEW_OFFSET = 0
+CRE_OFFSET = 0
 
 #####################
 # Code starts here. #
@@ -71,7 +79,18 @@ def checkCollection(col=None, force=False):
             col.conf["beeminderNewTimestamp"] = timestamp
             col.setMod()
 
-    if force and (REP_GOAL or NEW_GOAL):
+    # created (or imported!) cards
+    if CRE_GOAL:
+        cre_cards = col.cardCount()
+        last_timestamp = col.conf.get("beeminderCreTimestamp", 0)
+        timestamp      = col.db.first("select id/1000 from revlog order by id desc limit 1")[0]
+        reportCards(col, cre_cards, timestamp, "beeminderCreTotal", CRE_GOAL, CRE_OFFSET)
+
+        if (force or timestamp != last_timestamp) and SEND_DATA:
+            col.conf["beeminderCreTimestamp"] = timestamp
+            col.setMod()
+
+    if force and (REP_GOAL or NEW_GOAL or CRE_GOAL):
         showInfo("Synced with Beeminder.")
 
 def reportCards(col, total, timestamp, count_type, goal, offset=0, force=False):
@@ -147,3 +166,4 @@ def timestamp(time):
 
 # run update whenever we sync a deck
 anki.sync.Syncer.sync = wrap(anki.sync.Syncer.sync, beeminderUpdate, "around")
+

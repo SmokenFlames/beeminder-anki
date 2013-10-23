@@ -20,6 +20,8 @@ Known Issues / TODO:
 2. Only supports Odometer goals. It should also support Do More.
 3. A few more sanity checks here and there would be nice too.
 4. The number of reported new reviews in Beeminder's comments is sometimes wrong. This is purely cosmetic though.
+5. The number of 'created' cards includes those imported decks, so use retroratchet on your goal (or autoratchet)
+6. The number of 'created' items is cards, not facts, so will be higher than you expect.
 
 Contact / Bugs:
 
